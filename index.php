@@ -7,35 +7,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $password = $_POST['password'] ?? '';
 
   try {
-    $query = "SELECT * FROM users WHERE username = :username AND role = 'admin'";
+    $query = "
+      SELECT u.*, r.roleName
+      FROM users u
+      JOIN roles r ON u.roleId = r.roleId
+      WHERE u.username = :username
+    ";
     $stmt = $conn->prepare($query);
     $stmt->bindParam(':username', $username);
     $stmt->execute();
-    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($admin && password_verify($password, $admin['password'])) {
-      $_SESSION['username'] = $admin['username'];
-      $_SESSION['role'] = $admin['role'];
-      $_SESSION['userId'] = $admin['userId'];
+    if ($user && password_verify($password, $user['password'])) {
+      session_regenerate_id(true);
+      $_SESSION['username'] = $user['username'];
+      $_SESSION['role'] = $user['roleName'];
+      $_SESSION['userId'] = $user['userId'];
 
+      // Optional: set employeeId if employee role
+      if ($user['roleName'] === 'employee') {
+        $_SESSION['employeeId'] = $user['employeeId'];
+      }
 
+      // Log login
       $actionTypeId = 1;
-      $systemlog_stmt = $conn->prepare("INSERT INTO systemLogs (userId, actionTypeId, timestamp) VALUES (?, ?, NOW())");
-      $systemlog_stmt->execute([$admin['userId'], $actionTypeId]);
+      $log_stmt = $conn->prepare("INSERT INTO systemLogs (userId, actionTypeId, timestamp) VALUES (?, ?, NOW())");
+      $log_stmt->execute([$user['userId'], $actionTypeId]);
 
-      echo "<script>
-        alert('Welcome, " . htmlspecialchars($admin['username']) . "!');
-        window.location.href = '../includes/dashboard.php';
-      </script>";
+      if ($user['roleName'] === 'admin') {
+        echo "<script>
+          alert('Welcome, " . htmlspecialchars($user['username']) . "!'); 
+          window.location.href = '/Archube/Archcube_payroll/includes/dashboard.php';
+        </script>";
+      } elseif ($user['roleName'] === 'employee') {
+        echo "<script>
+          alert('Welcome, " . htmlspecialchars($user['username']) . "!'); 
+          window.location.href = '/Archube/Archcube_payroll/includes/employee_dashboard.php';
+        </script>";
+      } else {
+        echo "<script>alert('Unauthorized role.');</script>";
+      }
       exit;
     } else {
-      echo "<script>alert('Invalid admin credentials.');</script>";
+      echo "<script>alert('Invalid credentials.');</script>";
     }
   } catch (PDOException $e) {
-    echo "Error: " . $e->getMessage();
+    echo "<script>alert('An error occurred. Please try again later.');</script>";
   }
 }
 ?>
+
 
 
 <!DOCTYPE html>
