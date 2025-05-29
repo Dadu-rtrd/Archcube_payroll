@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       } elseif ($user['roleName'] === 'employee') {
         echo "<script>
           alert('Welcome, " . htmlspecialchars($user['username']) . "!'); 
-          window.location.href = '/Archube/Archcube_payroll/includes/employee_dashboard.php';
+          window.location.href = '/Archube/Archcube_payroll/includes/empDash.php';
         </script>";
       } else {
         echo "<script>alert('Unauthorized role.');</script>";
